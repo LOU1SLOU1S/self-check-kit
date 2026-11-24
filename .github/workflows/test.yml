@@ -9,8 +9,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python: ["3.9", "3.12"]
+        include:
+          # 3.9 is macOS's built-in python3, the oldest version the kit supports.
+          # ubuntu-latest (26.04) no longer offers 3.9 in setup-python, so Ubuntu starts at 3.10.
+          - { os: macos-latest, python: "3.9" }
+          - { os: macos-latest, python: "3.12" }
+          - { os: ubuntu-latest, python: "3.10" }
+          - { os: ubuntu-latest, python: "3.12" }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

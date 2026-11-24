@@ -152,7 +152,7 @@ adapters/merge.py                     merge-safe config edits
 install.sh / uninstall.sh
 eval/trap/ + eval/run_trap.py         trap test
 tests/run_tests.py                    offline suite
-.github/workflows/test.yml            CI: Ubuntu + macOS, Python 3.9 + 3.12
+.github/workflows/test.yml            CI: macOS (Python 3.9, 3.12) + Ubuntu (3.10, 3.12)
 TEST-RESULTS.md
 ```
 
