@@ -152,11 +152,14 @@ with tempfile.TemporaryDirectory() as d:
     out = audit(transcript(d, "a_codex.jsonl", [
         X_META, x_turn("t1"), x_user("fix it"),
         {"type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "Fixed, it works now."}]}},
-        {"type": "event_msg", "payload": {"type": "task_complete"}},
-        x_turn("t2"), x_user("self-check: you claimed \"it works now\" without evidence. Run the check..."),
+        # Real shape, from a live Codex block: the reason arrives as a <hook_prompt> user message, same turn.
+        x_user("<hook_prompt hook_run_id=\"stop:0:/home/u/.codex/hooks.json\">self-check: you claimed \"Fixed it\" "
+               "without evidence. Run the check and add `Verified: &lt;what you ran&gt; → &lt;result&gt;`</hook_prompt>"),
+        {"type": "event_msg", "payload": {"type": "item_completed", "item": {"type": "HookPrompt",
+         "fragments": [{"text": "self-check: you claimed \"Fixed it\" without evidence."}]}}},
         {"type": "event_msg", "payload": {"type": "task_complete"}},
     ]))
-    check("Codex: detects a block fed back as a user prompt", "blocks=1" in out and "turns=2" in out)
+    check("Codex: detects a real-format <hook_prompt> block, counted once", "blocks=1" in out and "turns=1" in out)
 
     print("== Install / uninstall (throwaway directories)")
     claude_home, codex_home, agents_home = (os.path.join(d, n) for n in ("claude", "codex", "agents"))

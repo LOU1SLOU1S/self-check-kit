@@ -131,7 +131,7 @@ Results so far are in [TEST-RESULTS.md](TEST-RESULTS.md).
 - **The judges only see the final reply**, not the tool calls. That's why the evidence check reads the transcript. It confirms that *some* check ran, not that it was the right one; the soft check flags obvious mismatches.
 - **Technical details aren't policed by the hooks.** Unchecked APIs, flags and paths are covered by the skill only.
 - **Transcript formats aren't stable interfaces**, especially Codex's ("isn't a stable interface for hooks and may change"). The evidence check fails open (allows) if it can't read a transcript, so a format change makes it lenient, never stuck.
-- **Codex doesn't record hook runs**, so the audit's Codex "turns" count is an upper bound. Blocks are found by their reason text, which Codex feeds back as a new prompt.
+- **Codex doesn't record hook runs that allow a reply**, so the audit's Codex "turns" count is an upper bound, covering sessions active since the hooks were *last installed* (re-running `install.sh` resets it). Blocks are recorded: Codex feeds the reason back as a `<hook_prompt>` message in the same turn, and the audit counts those.
 - **Cost:** the Claude Code AI judge adds a small model call and 1–4.5 s to every turn. The Codex hook takes about 0.1 s.
 
 ## Layout

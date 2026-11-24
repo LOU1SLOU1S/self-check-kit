@@ -130,7 +130,7 @@ def run_codex(d, prompt, hooks, binary, model=None):
     if hooks == "off":
         cmd += ["--disable", "hooks"]
     started = time.time()
-    r = subprocess.run(cmd + [prompt], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    r = subprocess.run(cmd + [prompt], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        universal_newlines=True, timeout=900)
     msg = open(out).read() if os.path.exists(out) else ""
     codex_home = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
@@ -154,7 +154,7 @@ def run_claude(d, prompt, hooks, binary, model=None):
         cmd += ["--model", model]
     if hooks == "off":
         sys.exit("--hooks off isn't supported for claude; run it with the hooks uninstalled instead.")
-    r = subprocess.run(cmd, cwd=d, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    r = subprocess.run(cmd, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        universal_newlines=True, timeout=900)
     try:
         data = json.loads(r.stdout)
