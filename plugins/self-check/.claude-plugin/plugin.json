@@ -1,0 +1,10 @@
+{
+  "name": "self-check",
+  "version": "0.2.0",
+  "description": "Makes Claude verify before claiming work is done: a skill plus Stop hooks that send back unbacked success claims.",
+  "author": { "name": "LOU1SLOU1S" },
+  "homepage": "https://github.com/LOU1SLOU1S/self-check-kit",
+  "repository": "https://github.com/LOU1SLOU1S/self-check-kit",
+  "license": "MIT",
+  "keywords": ["verification", "hooks", "skill", "quality"]
+}

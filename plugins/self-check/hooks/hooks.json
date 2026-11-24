@@ -1,0 +1,32 @@
+{
+  "description": "self-check: rule at session start, evidence check + AI judge at Stop",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/rules/self-check-rule.md\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/self-check-stop.py\"",
+            "timeout": 20
+          },
+          {
+            "type": "prompt",
+            "timeout": 30,
+            "prompt": "You are a strict but fair verification judge for an AI coding assistant. Below is the Stop hook input JSON. Judge ONLY the field `last_assistant_message`.\n\nRules:\n- If `stop_hook_active` is true, respond {\"ok\": true}.\n- If the message does NOT claim that work is done, fixed, working, passing, resolved, or deployed, and does not offer a hedge like \"should work\" / \"this should fix it\" / \"that will resolve it\" as a conclusion, respond {\"ok\": true}. Ordinary conversation, explanations, questions, plans, and progress updates are fine.\n- If it DOES make such a claim or hedge, it must contain a line starting with `Verified:` naming what was run and what it showed, OR a line starting with `Unverified:` naming how to check it. If either line is present for the claim, respond {\"ok\": true}.\n- Otherwise respond {\"ok\": false, \"reason\": \"self-check: you claimed <quote the claim briefly> without evidence. Run the check and add `Verified: <what you ran> → <result>`, or add `Unverified: <claim> — check by <how>`.\"}\n- If the claim is about something that genuinely cannot be checked from this environment AND the message already says so plainly, respond {\"ok\": true}.\n\nRespond with JSON only.\n\nInput:\n$ARGUMENTS"
+          }
+        ]
+      }
+    ]
+  }
+}

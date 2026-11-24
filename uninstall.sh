@@ -1,49 +1,32 @@
 #!/usr/bin/env bash
-# Remove the self-check skill, its Stop hooks, and its CLAUDE.md rule. Leaves everything else alone.
+# Remove self-check from Claude Code and/or Codex. Leaves everything else alone.
+#   ./uninstall.sh [--agent claude|codex|all]   (default: all)
 set -euo pipefail
-TARGET="${SELF_CHECK_TARGET:-$HOME/.claude}"
+SRC="$(cd "$(dirname "$0")" && pwd)"
+CLAUDE_HOME="${SELF_CHECK_CLAUDE_HOME:-$HOME/.claude}"
+CODEX_DIR="${SELF_CHECK_CODEX_HOME:-${CODEX_HOME:-$HOME/.codex}}"
+AGENTS_HOME="${SELF_CHECK_AGENTS_HOME:-$HOME/.agents}"
 
-rm -rf "$TARGET/skills/self-check"
-rm -f "$TARGET/hooks/self-check-stop.py" "$TARGET/hooks/self-check-audit.py"
+AGENT="all"
+case "${1:-}" in
+  --agent) AGENT="${2:-all}" ;;
+  --agent=*) AGENT="${1#*=}" ;;
+esac
+[ "$AGENT" = "all" ] && AGENT="claude,codex"
 
-python3 - "$TARGET" <<'PY'
-import json, os, sys
-target = sys.argv[1]
-
-def ours(h):
-    return "self-check-stop.py" in h.get("command", "") or "verification judge" in h.get("prompt", "")
-
-path = os.path.join(target, "settings.json")
-if os.path.exists(path):
-    with open(path) as fh:
-        settings = json.load(fh)
-    hooks = settings.get("hooks", {})
-    kept = []
-    for group in hooks.get("Stop", []):
-        rest = [h for h in group.get("hooks", []) if not ours(h)]
-        if rest:
-            group["hooks"] = rest
-            kept.append(group)
-    if kept:
-        hooks["Stop"] = kept
-    else:
-        hooks.pop("Stop", None)
-    if not hooks:
-        settings.pop("hooks", None)
-    with open(path, "w") as fh:
-        json.dump(settings, fh, indent=2, ensure_ascii=False)
-        fh.write("\n")
-
-START, END = "<!-- self-check:start -->", "<!-- self-check:end -->"
-md = os.path.join(target, "CLAUDE.md")
-if os.path.exists(md):
-    text = open(md).read()
-    if START in text and END in text:
-        pre, rest = text.split(START, 1)
-        text = (pre.rstrip() + "\n" + rest.split(END, 1)[1].lstrip("\n")).strip()
-        with open(md, "w") as fh:
-            fh.write(text + "\n" if text else "")
-    elif "load the `self-check` skill" in text:
-        print("Note: CLAUDE.md has the self-check rule without markers; remove it by hand.")
-PY
-echo "Removed self-check from $TARGET. Start a new session for it to take effect."
+IFS=',' read -r -a AGENTS <<< "$AGENT"
+for a in "${AGENTS[@]}"; do
+  case "$a" in
+    claude)
+      rm -rf "$CLAUDE_HOME/skills/self-check" "$CLAUDE_HOME/hooks/self-check"
+      rm -f "$CLAUDE_HOME/hooks/self-check-stop.py" "$CLAUDE_HOME/hooks/self-check-audit.py"
+      python3 "$SRC/adapters/merge.py" uninstall claude "$CLAUDE_HOME" "$CLAUDE_HOME/settings.json" "$CLAUDE_HOME/CLAUDE.md"
+      echo "Removed self-check from Claude Code ($CLAUDE_HOME)." ;;
+    codex)
+      rm -rf "$AGENTS_HOME/skills/self-check" "$CODEX_DIR/hooks/self-check"
+      python3 "$SRC/adapters/merge.py" uninstall codex "$CODEX_DIR" "$CODEX_DIR/hooks.json" "$CODEX_DIR/AGENTS.md"
+      echo "Removed self-check from Codex ($CODEX_DIR)." ;;
+    *) echo "Unknown agent: $a"; exit 1 ;;
+  esac
+done
+echo "Start a new session in each agent for it to take effect."

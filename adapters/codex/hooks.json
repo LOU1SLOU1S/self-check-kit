@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CODEX_HOME/hooks/self-check/self-check-stop.py\" --claims",
+            "timeout": 20,
+            "statusMessage": "self-check"
+          }
+        ]
+      }
+    ]
+  }
+}

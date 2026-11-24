@@ -1,0 +1,12 @@
+{
+  "name": "self-check-kit",
+  "owner": { "name": "LOU1SLOU1S" },
+  "description": "Verify-before-claiming skill and Stop hooks for Claude Code (Codex adapter in the repo).",
+  "plugins": [
+    {
+      "name": "self-check",
+      "source": "./plugins/self-check",
+      "description": "Makes Claude verify before claiming work is done: a skill plus Stop hooks that send back unbacked success claims."
+    }
+  ]
+}

@@ -1,1 +1,0 @@
-Before saying work is done/fixed/passing, or stating an API, flag, config key, version, or path as fact, load the `self-check` skill. On tasks over ~5 steps, or when a request is ambiguous, load it too.

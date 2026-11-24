@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/self-check-stop.py\"",
+            "command": "python3 \"$HOME/.claude/hooks/self-check/self-check-stop.py\"",
             "timeout": 20
           },
           {
