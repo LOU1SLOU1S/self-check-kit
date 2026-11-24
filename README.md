@@ -100,3 +100,7 @@ install.sh / uninstall.sh
 tests/run_tests.py
 TEST-RESULTS.md
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
