@@ -28,17 +28,24 @@ import selfcheck_lib as lib  # noqa: E402
 CLAUDE_GLOB = os.path.expanduser("~/.claude/projects/*/*.jsonl")
 CODEX_GLOB = os.path.join(os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex"),
                           "sessions", "*", "*", "*", "rollout-*.jsonl")
-# Text that only appears where the hooks' own source/prompt is quoted, not in a real block.
-EXCLUDE = ("<quote the claim briefly>", "EVIDENCE_REASON", "BLOCK_MARKERS", "CLAIM_REASON")
+# Text that only appears where the hooks' own source code is quoted, not in a real block.
+EXCLUDE = ("EVIDENCE_REASON", "BLOCK_MARKERS", "CLAIM_REASON")
+# A marker followed by one of these is a template (the judge's prompt or the script's
+# format string), not a real reason. Real Claude blocks *contain* the judge's prompt,
+# so templates are skipped per occurrence, never by rejecting the whole text.
+TEMPLATE_TAILS = ("<quote the claim", "%s")
 
 
 def find_marker(txt):
     if not txt or any(x in txt for x in EXCLUDE):
         return None
     for marker in lib.BLOCK_MARKERS:
-        if marker in txt:
-            start = txt.find(marker)
-            return txt[start:start + 300].replace("\n", " ")
+        start = txt.find(marker)
+        while start >= 0:
+            tail = txt[start + len(marker):start + len(marker) + 40]
+            if not any(t in tail for t in TEMPLATE_TAILS):
+                return txt[start:start + 300].replace("\n", " ")
+            start = txt.find(marker, start + 1)
     return None
 
 
@@ -76,7 +83,9 @@ def audit_claude(rows):
         elif kind == "system" and row.get("subtype") == "stop_hook_summary":
             if any(is_ours(i) for i in row.get("hookInfos") or []):
                 judged += 1
-                errors += len(row.get("hookErrors") or [])
+                # Claude Code also lists a prompt hook's block under hookErrors; that's the
+                # block (counted from its feedback row), not a failure.
+                errors += sum(1 for e in row.get("hookErrors") or [] if not find_marker(str(e)))
         # Only rows that carry feedback to the agent; others (e.g. api-request-blob)
         # hold copies of the agent's own tool calls and would give false positives.
         reason = None

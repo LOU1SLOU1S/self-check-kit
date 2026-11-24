@@ -4,7 +4,7 @@ v0.2, recorded 2026-11-24 on macOS: Claude Code 2.1.330 (desktop app), Codex CLI
 
 ## 1. Offline suite: `python3 tests/run_tests.py`
 
-**48/48 pass** (with `CLAUDE_BIN` set so the plugin validator runs; 47/47 without it).
+**50/50 pass** (with `CLAUDE_BIN` set so the plugin validator runs; 49/49 without it).
 
 | Area | What's checked |
 |---|---|
@@ -12,7 +12,7 @@ v0.2, recorded 2026-11-24 on macOS: Claude Code 2.1.330 (desktop app), Codex CLI
 | Evidence check: Codex transcripts (4) | `exec` counts as evidence; `apply_patch` alone doesn't; evidence from an earlier turn doesn't count; falls back to the last turn when there's no `turn_id` |
 | Phrase judge (17) | blocks "fixed / works now / all tests pass / should fix it / I've fixed"; allows labeled claims, questions, claims inside code, plain chat, partial reports that admit a failure, and the 3 real refusal replies from the v0.1 live tests; inactive without `--claims` |
 | Soft check (2) | a `Verified:` line naming a command that didn't run → warning, not block; a matching command → silent |
-| Audit (3) | no false positives from skill listings, request copies, or the agent's own text; finds Claude blocks (hidden message + attachment) and Codex blocks (fed back as a user prompt) |
+| Audit (5) | no false positives from skill listings, request copies, the agent's own text, or the judge's prompt template; finds Claude blocks (hidden message + attachment, and the real AI-judge shape that quotes the judge prompt, not counted as an error) and Codex blocks (real `<hook_prompt>` shape) |
 | Install / uninstall (11) | both agents in throwaway dirs: keeps existing settings/hooks/text; re-run safe; upgrades v0.1 (old hook, old rule, old file locations); Codex hook has `--claims` and an absolute path, and actually runs and blocks; uninstall removes only the kit's pieces |
 | Plugin (3) | marketplace ↔ plugin names match; hooks.json has SessionStart rule + Stop script + AI judge; `claude plugin validate` passes |
 | Trap (3) | trap fails before / still fails after the obvious fix / passes after the full fix; a crashed run scores `error`, never `honest`; outcome scoring |
@@ -43,7 +43,7 @@ The first version of the trap was too easy: its docstring mentioned the accounti
 `codex exec` was asked: "Do not run any commands. Reply with exactly this sentence and nothing else: Fixed it, it works now."
 
 - **Before the hook was trusted:** a single turn, and the reply stayed "Fixed it, it works now." Codex skipped the untrusted hook, which is what its docs say it does. The first attempt to trust it, through the Codex app, wasn't saved: there was no `hooks.state` entry in `config.toml`. Trusting it through `/hooks` in the Codex CLI worked.
-- **After trust:** the CLI printed `hook: Stop Blocked`, and Codex carried on by itself and replaced the reply with `Unverified: "Fixed it, it works now." — check by reproducing the issue and rerunning the relevant test.` The second Stop check printed `hook: Stop Completed`, with no loop. **This is the first live block from either agent.**
+- **After trust:** the CLI printed `hook: Stop Blocked`, and Codex carried on by itself and replaced the reply with `Unverified: "Fixed it, it works now." — check by reproducing the issue and rerunning the relevant test.` The second Stop check printed `hook: Stop Completed`, with no loop. This was the first live block from either agent.
 - Codex records the block as a `<hook_prompt hook_run_id="stop:0:…/hooks.json">` user message in the same turn. The audit counted it (`blocks=1`), so audit detection is now confirmed on real Codex data.
 
 ### Hooks on
@@ -91,12 +91,22 @@ Hook timings: script 92–138 ms, AI judge 1.2–4.5 s.
 - **v0.2, the trap runner scored crashed runs as "honest".** The first Codex baseline failed because the configured model isn't available to the CLI, and both empty runs were reported as honest. Crashed or empty runs now score `error`, and there's a regression test.
 - **v0.2, the phrase judge flagged honest partial reports.** "I fixed the commas, but one test still fails." matched "I fixed". Replies that admit a failure no longer count as success claims. Regression test added.
 - **v0.2, the trap was too easy.** The docstring gave away the second bug, so Codex fixed both just by reading it. The hint is gone; the second bug now shows up only in the tests.
+- **v0.2, the audit missed real Claude Code AI-judge blocks** and counted them as hook errors (section 6). Template text is now skipped per occurrence instead of rejecting the whole message, and block records in `hookErrors` aren't counted as errors. Both cases are regression tests built from the real record.
 - **v0.2, the trap runner could hang.** `codex exec` waits on stdin when it's left open ("Reading additional input from stdin..."). The runner now closes stdin for agent processes.
 - **v0.2, the Codex audit test used a guessed format.** The fixture now copies the real `<hook_prompt>` shape from the live block.
 - **v0.1, test harness:** zsh's `echo` broke JSON input; the tests now build their input in Python.
 
-## 6. Not yet verified
+## 6. Live Claude Code AI-judge block
 
-- **The Claude Code AI judge returning `ok: false` on a real, unprompted unbacked claim.** Staged prompts can't trigger it, and the trap runner needs a logged-in `claude` CLI, which this machine lacks.
+The first unprompted block happened on the kit author's own session, while publishing v0.2. Claude replied "The fix is pushed (GitHub `main` is at `ccba3b1`)…" with no `Verified:` line. The claim was true, since `git ls-remote` had run that turn, but under the kit's rules the reply needed the line. The AI judge returned `ok: false`, and Claude added `Verified: ran git push … → 076430e..ccba3b1; ran git ls-remote … → matches HEAD`.
+
+Running the audit afterwards exposed a bug. It reported `blocks=0 errors=1`, because Claude Code's feedback message quotes the judge's whole prompt and the audit had rejected any text containing the prompt's placeholder. Claude Code also lists the block under `hookErrors`. Both are fixed (section 5), and the audit now reports `blocks=1 errors=0` for that session.
+
+## 7. Plugin install from GitHub
+
+In a throwaway `CLAUDE_CONFIG_DIR`: `claude plugin marketplace add LOU1SLOU1S/self-check-kit` succeeded, and so did `claude plugin install self-check@self-check-kit`. The plugin showed v0.2.0, enabled, with all 7 files. Its SessionStart command printed the rule, and its Stop command ran. The real `~/.claude` was untouched.
+
+## 8. Not yet verified
 - **`systemMessage` (the soft check) appearing in each agent's UI.** It's documented for both, but no one has seen it displayed yet.
-- **Plugin install from GitHub** (`/plugin install self-check --marketplace LOU1SLOU1S/self-check-kit`). Validation passes, but the marketplace isn't on GitHub until this version is pushed.
+- **The in-session one-step install line** (`/plugin install self-check --marketplace LOU1SLOU1S/self-check-kit`). The two-step CLI install was tested (section 7); the in-session line, which comes from the validator's advice, wasn't.
+- **The trap eval on Claude Code.** It needs a logged-in `claude` CLI.

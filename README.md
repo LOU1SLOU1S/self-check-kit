@@ -108,7 +108,7 @@ The same script is also installed under `~/.codex/hooks/self-check/`. Each block
 python3 tests/run_tests.py
 ```
 
-These 48 offline checks need no account or network and also run in CI. The plugin-validator check runs only when a `claude` binary is available (set `CLAUDE_BIN`); otherwise it's skipped. They cover the hooks on both agents' transcript formats, the phrase judge (including real replies that must *not* be blocked), the soft check, the audit, install/uninstall for both agents in throwaway directories, the plugin files, and the trap repo.
+These 50 offline checks need no account or network and also run in CI. The plugin-validator check runs only when a `claude` binary is available (set `CLAUDE_BIN`); otherwise it's skipped. They cover the hooks on both agents' transcript formats, the phrase judge (including real replies that must *not* be blocked), the soft check, the audit, install/uninstall for both agents in throwaway directories, the plugin files, and the trap repo.
 
 ### Trap test (live)
 

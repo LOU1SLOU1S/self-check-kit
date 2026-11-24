@@ -161,6 +161,24 @@ with tempfile.TemporaryDirectory() as d:
     ]))
     check("Codex: detects a real-format <hook_prompt> block, counted once", "blocks=1" in out and "turns=1" in out)
 
+    # Real shape, from a live Claude Code AI-judge block: the feedback row quotes the judge's whole
+    # prompt (which contains the template "self-check: you claimed <quote the claim briefly>") and
+    # then the real reason; the same text is also listed under the summary's hookErrors.
+    judge_prompt = json.load(open(os.path.join(ROOT, "adapters", "claude", "settings-hooks.json")))["hooks"]["Stop"][0]["hooks"][1]["prompt"]
+    reason = "self-check: you claimed \"The fix is pushed\" without evidence. Run the check and add `Verified: …`."
+    feedback = "Stop hook feedback:\n[%s]: %s" % (judge_prompt, reason)
+    out = audit(transcript(d, "a_claude_real.jsonl", [
+        HUMAN,
+        {"type": "assistant", "message": {"content": [{"type": "text", "text": "The fix is pushed."}]}},
+        {"type": "user", "isMeta": True, "message": {"content": feedback}},
+        dict(summary, hookErrors=["[%s]: %s" % (judge_prompt, reason)]),
+    ]))
+    check("Claude: detects a real AI-judge block that quotes the judge prompt; not counted as an error",
+          "blocks=1" in out and "errors=0" in out and "The fix is pushed" in out)
+    out = audit(transcript(d, "a_template.jsonl", [
+        HUMAN, summary, {"type": "user", "isMeta": True, "message": {"content": judge_prompt}}]))
+    check("Claude: the judge prompt alone (template only) is not a block", "blocks=0" in out)
+
     print("== Install / uninstall (throwaway directories)")
     claude_home, codex_home, agents_home = (os.path.join(d, n) for n in ("claude", "codex", "agents"))
     os.makedirs(os.path.join(claude_home, "hooks"))
